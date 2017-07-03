@@ -1,0 +1,24 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmSku": {
+      "value": "Standard_F8s"
+    },
+    "vmssName": {
+      "value": "vmsscusto"
+    },
+    "instanceCount": {
+      "value": 2
+    },
+    "adminUsername": {
+      "value": "vmssusrroot"
+    },
+    "imageUri":{
+      "value": "https://devopson2co3ifoubym.blob.core.windows.net/system/Microsoft.Compute/Images/images/packer-osDisk.3bd89c77-662a-4445-b63f-bec0a88fd3bd.vhd"
+    },
+    "adminPassword": {
+      "value": "S3cureP@551234567890"
+    }
+  }
+}

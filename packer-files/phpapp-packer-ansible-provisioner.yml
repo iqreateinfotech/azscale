@@ -1,0 +1,141 @@
+---
+- hosts: all
+  sudo: yes
+
+  tasks:
+  - name: Install Packages
+    apt: name={{ item }} update_cache=yes state=latest
+    with_items:
+      - apache2 
+      - git
+      - curl
+      - python-software-properties
+      - debconf-utils
+      - supervisor
+
+#  - name: Git Clone Repo
+#    git: repo=https://muttu@gitlab.com/muttu/php-ci.git dest=/opt/phpapp update=yes force=yes accept_hostkey=yes 
+#    register: git_finished
+  
+  - name: copy ansible
+    sudo: yes
+    copy: src=/tmp/ansible.cfg  dest=/etc/ansible/ansible.cfg mode=664
+
+  - name: copy uq pack script
+    sudo: yes
+    copy: src=/tmp/install_uqpack.sh  dest=/tmp/packer-provisioner-ansible-local/install_uqpack.sh mode=777 
+
+  - apt_repository: repo=ppa:ondrej/php state=present update_cache=yes
+  
+  - name: install php7.0
+    action: apt name=php7.0 state=present update_cache=yes
+   
+  - name: install php7.0-curl
+    action: apt name=php7.0-curl state=present update_cache=yes
+    
+  - name: install php7.0-mbstring
+    action: apt name=php7.0-mbstring state=present update_cache=yes
+    
+  - name: install php7.0-gd
+    action: apt name=php7.0-gd state=present update_cache=yes
+    
+  - name: install php7.0-xml
+    action: apt name=php7.0-xml state=present update_cache=yes
+    
+  - name: install php7.0-mcrypt
+    action: apt name=php7.0-mcrypt state=present update_cache=yes
+    
+  - name: install php7.0-zip
+    action: apt name=php7.0-zip state=present update_cache=yes
+    
+  - name: install php7.0-cli
+    action: apt name=php7.0-cli state=present update_cache=yes
+     
+  - name: install php7.0-common
+    action: apt name=php7.0-common state=present  
+  
+  - name: install libapache2-mod-php7.0
+    action: apt name=libapache2-mod-php7.0 state=present update_cache=yes
+
+  - synchronize:
+      src: ../peptide
+      dest: /usr/local
+
+  - name: download composer
+    get_url:
+      url: https://getcomposer.org/installer
+      dest: /tmp/installer
+    tags: composer
+
+  - name: install composer
+    shell: cat /tmp/installer | php -- --install-dir=/usr/local/bin
+    args:
+      creates: /usr/local/bin/composer
+    tags: composer
+
+  - name: rename composer.phar to composer
+    shell: mv /usr/local/bin/composer.phar /usr/local/bin/composer
+    args:
+      creates: /usr/local/bin/composer
+    tags: composer
+
+  - name: make composer executable
+    file: 
+      path: /usr/local/bin/composer
+      mode: a+x
+      state: file
+    tags: composer
+
+  - composer:
+      command: install
+      working_dir: /usr/local/peptide
+  
+  - name: Set download dir permissions for vendor
+    file: path=/usr/local/peptide/vendor owner=packer group=packer mode=g+rwX recurse=yes
+
+  - name: add repo for java 8
+    apt_repository: repo='ppa:webupd8team/java' state=present
+
+  - name: set licence selected
+    shell: /bin/echo debconf shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
+    sudo: yes
+
+  - name: set licence seen
+    shell: /bin/echo debconf shared/accepted-oracle-license-v1-1 seen true | /usr/bin/debconf-set-selections
+    sudo: yes
+
+  - name: install java 8
+    apt: name=oracle-java8-installer state=latest update-cache=yes force=yes
+    sudo: yes
+  
+  - name: Configure UQ packages
+    shell: /tmp/packer-provisioner-ansible-local/install_uqpack.sh mode=777 --some-arguments S3cureP@551234567890
+    sudo: yes
+    args:
+      executable: /bin/bash
+      
+#  - name: copy /opt/phpapp
+#    sudo: yes
+#    copy: src=/opt/phpapp/  dest=/var/www/html/phpapp mode=644 
+    # shell: cp /tmp/index.html /var/www/html/index.html
+    # notify: Restart Apache
+
+# - name: copy index.html
+#   sudo: yes
+#   copy: src=index.html  dest=/var/www/html/index.html mode=644 
+  # notify: Restart Apache
+
+# - name: copy drill.html
+#    sudo: yes
+#    copy: src=/tmp/drill.html  dest=/var/www/html/drill.html mode=644 
+    # notify: Restart Apache
+
+#  - name: copy peptide directory
+#    sudo: yes
+#    copy: src=/tmp/peptide/  dest=/usr/local/share/peptide 
+#    notify: Restart Apache
+  
+
+  handlers:
+  - name: Restart Apache
+    service: name=apache2 state=restarted
